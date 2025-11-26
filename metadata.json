@@ -1,0 +1,5 @@
+{
+  "name": "CF25 Bar Stock Logic",
+  "description": "Event logistics inventory management system with dynamic case calculators and Google Sheets integration.",
+  "requestFramePermissions": []
+}
