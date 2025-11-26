@@ -10,7 +10,6 @@ import {
   LogOut, 
   User, 
   Store, 
-  CheckCircle,
   AlertTriangle,
   ChevronLeft
 } from 'lucide-react';
