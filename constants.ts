@@ -1,7 +1,7 @@
 import { AppConfig } from './types';
 
 // Updated to the latest deployment URL provided
-export const GOOGLE_SCRIPT_URL = (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyggPBxQjleV6GtSVkAHmhJMO6MNir0mLbJZbgRVho9y2hXTiDconOW_ybOgi_MGKd_gA/exec";
+export const GOOGLE_SCRIPT_URL = (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxRfEeY4928qQ4_eqqxufdO7SRQPhl3YEGn3U02SgQwjlAtVWarDSHfoPQkT35xS4bbFA/exec";
 
 export const MOCK_CONFIG: AppConfig = {
   products: [
