@@ -13,8 +13,14 @@ export const ApiService = {
     }
 
     try {
-      // GET Request: Simple fetch, no headers to avoid Preflight/CORS issues
-      const response = await fetch(GOOGLE_SCRIPT_URL);
+      // GET Request: 
+      // 1. Add timestamp (?t=...) to prevent caching old data
+      // 2. Add credentials: 'omit' to fix CORS errors on Vercel/Mobile
+      const response = await fetch(`${GOOGLE_SCRIPT_URL}?t=${new Date().getTime()}`, {
+        method: 'GET',
+        credentials: 'omit',
+      });
+      
       const data = await response.json();
 
       // MAPPING FIX: 
@@ -60,7 +66,7 @@ export const ApiService = {
         barName: undefined
       };
 
-      // POST Request: Send as text/plain
+      // POST Request: Send as text/plain to avoid preflight
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(backendPayload)
