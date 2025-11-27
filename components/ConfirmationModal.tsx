@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
-import { X, Check, ArrowRight } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { StockItemSubmission } from '../types';
 
 interface ConfirmationModalProps {
