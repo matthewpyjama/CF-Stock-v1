@@ -14,14 +14,19 @@ export interface Location {
 export interface Staff {
   id: string;
   name: string;
-  role?: 'Admin' | 'Staff' | 'Logistics'; // New Field
-  assignedLocation?: string; // New Field
+  role?: 'Admin' | 'Staff' | 'Logistics';
+  assignedLocation?: string;
+  pin?: string; // New Field for Auth
 }
+
+// Maps BarName -> { ProductName: Quantity }
+export type OpeningSnapshot = Record<string, Record<string, number>>;
 
 export interface AppConfig {
   products: Product[];
   locations: Location[];
   staff: Staff[];
+  openingSnapshot?: OpeningSnapshot; // New Field for Validation
 }
 
 export interface StockItemSubmission {

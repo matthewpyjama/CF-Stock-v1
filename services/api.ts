@@ -18,9 +18,6 @@ export const ApiService = {
       const data = await response.json();
 
       // MAPPING FIX: 
-      // 1. The backend returns 'items', but frontend expects 'products'
-      // 2. Real data lacks 'id', so we use 'name' as the 'id' to fix dropdowns
-      // 3. Map new Role and AssignedLocation fields for Staff
       return {
         products: (data.items || []).map((p: any) => ({
           ...p,
@@ -34,8 +31,10 @@ export const ApiService = {
           ...s,
           id: s.name,
           role: s.role,
-          assignedLocation: s.assignedLocation
-        }))
+          assignedLocation: s.assignedLocation,
+          pin: s.pin ? String(s.pin) : undefined // Ensure PIN is a string
+        })),
+        openingSnapshot: data.openingSnapshot || {} // Get the validation data
       };
     } catch (error) {
       console.error("Failed to fetch config, falling back to mock", error);

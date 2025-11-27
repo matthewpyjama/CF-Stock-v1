@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { Package } from 'lucide-react';
+import { Package, AlertCircle } from 'lucide-react';
 
 interface SmartInputProps {
   product: Product;
   onUpdate: (totalUnits: number) => void;
+  // Validation Props
+  openingCount?: number; 
+  session?: 'Opening' | 'Closing';
 }
 
-export const SmartInput: React.FC<SmartInputProps> = ({ product, onUpdate }) => {
+export const SmartInput: React.FC<SmartInputProps> = ({ 
+  product, 
+  onUpdate,
+  openingCount,
+  session
+}) => {
   const [cases, setCases] = useState<string>('');
   const [loose, setLoose] = useState<string>('');
+  const [total, setTotal] = useState<number>(0);
   
   // Calculate total units whenever inputs change
   useEffect(() => {
     const caseCount = parseInt(cases) || 0;
     const looseCount = parseInt(loose) || 0;
-    // Ensure we don't send negative totals even if state somehow gets them
-    const total = Math.max(0, (caseCount * product.caseSize) + looseCount);
-    onUpdate(total);
+    const calculatedTotal = Math.max(0, (caseCount * product.caseSize) + looseCount);
+    
+    setTotal(calculatedTotal);
+    onUpdate(calculatedTotal);
   }, [cases, loose, product.caseSize, onUpdate]);
 
   // Prevent typing minus signs or 'e'
@@ -27,18 +37,36 @@ export const SmartInput: React.FC<SmartInputProps> = ({ product, onUpdate }) => 
     }
   };
 
+  // VALIDATION LOGIC: Check if Closing > Opening
+  const showWarning = session === 'Closing' && 
+                      openingCount !== undefined && 
+                      total > openingCount;
+
   return (
-    <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800 shadow-sm mb-3">
+    <div className={`p-4 rounded-lg border shadow-sm mb-3 transition-colors ${
+      showWarning ? 'bg-red-950/30 border-red-500/50' : 'bg-zinc-900 border-zinc-800'
+    }`}>
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="text-zinc-100 font-medium text-lg">{product.name}</h3>
           <p className="text-zinc-500 text-xs uppercase tracking-wider flex items-center gap-1">
             <Package size={12} /> Case Size: {product.caseSize}
           </p>
+          
+          {/* WARNING MESSAGE */}
+          {showWarning && (
+            <div className="flex items-center gap-1 text-red-400 text-xs mt-1 animate-pulse font-bold">
+              <AlertCircle size={12} />
+              <span>Warning: Higher than Opening ({openingCount})</span>
+            </div>
+          )}
         </div>
+        
         <div className="text-right">
-          <div className="text-2xl font-bold text-yellow-500">
-            {Math.max(0, ((parseInt(cases) || 0) * product.caseSize) + (parseInt(loose) || 0))}
+          <div className={`text-2xl font-bold transition-colors ${
+            showWarning ? 'text-red-500' : 'text-yellow-500'
+          }`}>
+            {total}
           </div>
           <div className="text-zinc-600 text-xs">Total Units</div>
         </div>

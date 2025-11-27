@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useAppData } from './context/AppDataContext';
-import { ViewState, StockItemSubmission, Product } from './types';
+import { ViewState, StockItemSubmission, Product, Staff } from './types';
 import { SmartInput } from './components/SmartInput';
 import { Button } from './components/Button';
 import { ConfirmationModal } from './components/ConfirmationModal';
+import { PinModal } from './components/PinModal';
 import { ApiService } from './services/api';
 import { 
   ClipboardList, 
@@ -21,6 +22,9 @@ const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('AUTH');
   const [submitting, setSubmitting] = useState(false);
   
+  // Auth State
+  const [pendingUser, setPendingUser] = useState<Staff | null>(null);
+
   // Stocktake State
   const [stockLocation, setStockLocation] = useState('');
   const [session, setSession] = useState<'Opening' | 'Closing'>('Opening');
@@ -70,22 +74,34 @@ const App: React.FC = () => {
     
     // Users with assignments only see their assigned bar(s)
     if (currentUser.assignedLocation) {
-      // Logic: Split string by comma, trim spaces, and check if location name is in the list
       const allowedBars = currentUser.assignedLocation.split(',').map(s => s.trim());
-      
-      // If the list is not empty, filter locations
       if (allowedBars.length > 0) {
          return config.locations.filter(l => allowedBars.includes(l.name));
       }
     }
-    
-    // Default fallback: If no specific assignment found but not Admin, 
-    // we assume they can see everything OR nothing. 
-    // For now, let's show all (fallback) or you can return [] to be strict.
     return config.locations;
   }, [config, currentUser]);
 
   // --- Handlers ---
+
+  const handleStaffClick = (staff: Staff) => {
+    // 1. Check if PIN is required
+    if (staff.pin && staff.pin.trim() !== "") {
+      setPendingUser(staff); // Open PIN Modal
+    } else {
+      // No PIN needed
+      setCurrentUser(staff);
+      setView('DASHBOARD');
+    }
+  };
+
+  const handlePinSuccess = () => {
+    if (pendingUser) {
+      setCurrentUser(pendingUser);
+      setPendingUser(null);
+      setView('DASHBOARD');
+    }
+  };
 
   const handleStocktakeReview = () => {
     if (!currentUser || !stockLocation) return;
@@ -99,7 +115,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Open Confirmation Modal
     setConfirmationData({
       isOpen: true,
       title: "Confirm Stocktake",
@@ -152,7 +167,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Open Confirmation Modal
     setConfirmationData({
       isOpen: true,
       title: "Confirm Transfer",
@@ -216,14 +230,11 @@ const App: React.FC = () => {
             {config?.staff.map(staff => (
               <button
                 key={staff.id}
-                onClick={() => {
-                  setCurrentUser(staff);
-                  setView('DASHBOARD');
-                }}
+                onClick={() => handleStaffClick(staff)}
                 className="w-full p-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-left flex items-center gap-3 transition-all"
               >
                 <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
-                  <User size={20} />
+                  {staff.pin ? <Lock size={16} className="text-yellow-600"/> : <User size={20} />}
                 </div>
                 <div className="flex-1">
                   <span className="font-medium text-zinc-200 block">{staff.name}</span>
@@ -242,6 +253,15 @@ const App: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* PIN Modal */}
+        <PinModal 
+          isOpen={!!pendingUser}
+          onClose={() => setPendingUser(null)}
+          onSuccess={handlePinSuccess}
+          targetPin={pendingUser?.pin || ''}
+          userName={pendingUser?.name || ''}
+        />
       </div>
     );
   }
@@ -268,7 +288,6 @@ const App: React.FC = () => {
         </header>
 
         <div className="grid gap-6 flex-1 content-center">
-          {/* Stocktake Button - HIDDEN for Logistics Role */}
           {!isLogistics && (
             <button
               onClick={() => setView('STOCKTAKE')}
@@ -288,7 +307,6 @@ const App: React.FC = () => {
             </button>
           )}
 
-          {/* Logistics Placeholder if they can't stocktake */}
           {isLogistics && (
              <div className="h-48 bg-zinc-900/50 rounded-3xl border border-zinc-800 p-8 flex flex-col items-center justify-center gap-4 opacity-50 cursor-not-allowed">
               <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-600">
@@ -318,8 +336,17 @@ const App: React.FC = () => {
     );
   }
 
-  // --- Reusable Item Renderer ---
-  const renderItemInputs = (updateMap: React.Dispatch<React.SetStateAction<Record<string, number>>>) => (
+  // Helper to get Opening Data for specific bar
+  const getOpeningCount = (prodName: string): number | undefined => {
+    if (!config?.openingSnapshot || !stockLocation) return undefined;
+    // stockLocation is the ID, we need the Name for the snapshot key
+    const locName = config.locations.find(l => l.id === stockLocation)?.name;
+    if (!locName) return undefined;
+    
+    return config.openingSnapshot[locName]?.[prodName];
+  };
+
+  const renderItemInputs = (updateMap: React.Dispatch<React.SetStateAction<Record<string, number>>>, isStocktake: boolean) => (
     <div className="space-y-8 pb-32">
       {(Object.entries(productsByCategory) as [string, Product[]][]).map(([category, items]) => (
         <div key={category}>
@@ -334,6 +361,9 @@ const App: React.FC = () => {
                 onUpdate={(total) => {
                   updateMap(prev => ({ ...prev, [product.name]: total }));
                 }}
+                // Pass validation props
+                session={isStocktake ? session : undefined}
+                openingCount={isStocktake ? getOpeningCount(product.name) : undefined}
               />
             ))}
           </div>
@@ -354,7 +384,6 @@ const App: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-3">
-            {/* LOCATION SELECTOR - Filtered by Role */}
             <select 
               className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm focus:ring-2 ring-yellow-500 outline-none"
               value={stockLocation}
@@ -385,7 +414,7 @@ const App: React.FC = () => {
 
         <div className="p-4">
           {stockLocation ? (
-            renderItemInputs(setStockItems)
+            renderItemInputs(setStockItems, true)
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
               <Store size={48} className="mb-4 opacity-50" />
@@ -405,7 +434,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Receipt Modal */}
         <ConfirmationModal 
           isOpen={!!confirmationData}
           onClose={() => setConfirmationData(null)}
@@ -469,7 +497,7 @@ const App: React.FC = () => {
 
         <div className="p-4">
           {(sourceLoc && destLoc) ? (
-            renderItemInputs(setTransferItems)
+            renderItemInputs(setTransferItems, false)
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
               <AlertTriangle size={48} className="mb-4 opacity-50" />
@@ -486,7 +514,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Receipt Modal */}
         <ConfirmationModal 
           isOpen={!!confirmationData}
           onClose={() => setConfirmationData(null)}
