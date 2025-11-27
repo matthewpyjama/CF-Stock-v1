@@ -49,10 +49,22 @@ export const ApiService = {
     }
 
     try {
+      // FIX: Map frontend keys to match Google Script expectations
+      // Frontend uses 'staffName', Backend expects 'staff'
+      // Frontend uses 'barName', Backend expects 'bar'
+      const backendPayload = {
+        ...payload,
+        staff: payload.staffName,
+        bar: payload.barName,
+        // Remove the mismatched keys to avoid confusion
+        staffName: undefined,
+        barName: undefined
+      };
+
       // POST Request: Send as text/plain (default) to avoid OPTIONS preflight
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(backendPayload)
       });
       return true;
     } catch (error) {
@@ -70,9 +82,17 @@ export const ApiService = {
     }
 
     try {
+      // FIX: Map frontend keys to match Google Script expectations
+      const backendPayload = {
+        ...payload,
+        staff: payload.staffName,
+        // Remove the mismatched key
+        staffName: undefined
+      };
+
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(backendPayload)
       });
       return true;
     } catch (error) {
