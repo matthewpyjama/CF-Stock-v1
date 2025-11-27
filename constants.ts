@@ -1,9 +1,8 @@
 import { AppConfig } from './types';
 
-// Read from Environment Variables (Vite standard)
-// On Vercel, set VITE_GOOGLE_SCRIPT_URL in Project Settings > Environment Variables
-// We cast import.meta to any because the TypeScript environment might not have vite/client types loaded
-export const GOOGLE_SCRIPT_URL = (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || ""; 
+// We default to the URL you provided so it works immediately.
+// You can still override this in Vercel settings if you want.
+export const GOOGLE_SCRIPT_URL = (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyLjk0OxzGrf9q9nfBRNBVeY6YivacAAZ5kDHkB6VFM0ZGyzHAPOTXjaQHFcvZVeVI6pA/exec";
 
 export const MOCK_CONFIG: AppConfig = {
   products: [
