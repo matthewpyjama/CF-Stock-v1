@@ -3,6 +3,7 @@ import { useAppData } from './context/AppDataContext';
 import { ViewState, StockItemSubmission, Product } from './types';
 import { SmartInput } from './components/SmartInput';
 import { Button } from './components/Button';
+import { ConfirmationModal } from './components/ConfirmationModal';
 import { ApiService } from './services/api';
 import { 
   ClipboardList, 
@@ -11,7 +12,8 @@ import {
   User, 
   Store, 
   AlertTriangle,
-  ChevronLeft
+  ChevronLeft,
+  Lock
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -29,6 +31,15 @@ const App: React.FC = () => {
   const [destLoc, setDestLoc] = useState('');
   const [transferItems, setTransferItems] = useState<Record<string, number>>({});
 
+  // Modal State
+  const [confirmationData, setConfirmationData] = useState<{
+    isOpen: boolean;
+    title: string;
+    details: { label: string; value: string }[];
+    items: StockItemSubmission[];
+    onConfirm: () => void;
+  } | null>(null);
+
   // Reset Logic
   const resetForms = () => {
     setStockItems({});
@@ -36,6 +47,7 @@ const App: React.FC = () => {
     setStockLocation('');
     setSourceLoc('');
     setDestLoc('');
+    setConfirmationData(null);
   };
 
   // Group Products for better UI
@@ -49,26 +61,65 @@ const App: React.FC = () => {
     return grouped;
   }, [config]);
 
-  // Handlers
-  const handleStocktakeSubmit = async () => {
-    if (!currentUser || !stockLocation) return;
-    setSubmitting(true);
+  // --- Filter Locations based on Role ---
+  const availableStocktakeLocations = useMemo(() => {
+    if (!config || !currentUser) return [];
     
-    // Convert map to array
+    // Admins see everything
+    if (currentUser.role === 'Admin') return config.locations;
+    
+    // Users with assignments only see their assigned bar(s)
+    if (currentUser.assignedLocation) {
+      // Logic: Split string by comma, trim spaces, and check if location name is in the list
+      const allowedBars = currentUser.assignedLocation.split(',').map(s => s.trim());
+      
+      // If the list is not empty, filter locations
+      if (allowedBars.length > 0) {
+         return config.locations.filter(l => allowedBars.includes(l.name));
+      }
+    }
+    
+    // Default fallback: If no specific assignment found but not Admin, 
+    // we assume they can see everything OR nothing. 
+    // For now, let's show all (fallback) or you can return [] to be strict.
+    return config.locations;
+  }, [config, currentUser]);
+
+  // --- Handlers ---
+
+  const handleStocktakeReview = () => {
+    if (!currentUser || !stockLocation) return;
+    
     const items: StockItemSubmission[] = (Object.entries(stockItems) as [string, number][])
       .filter(([_, qty]) => qty > 0)
       .map(([name, quantity]) => ({ productName: name, quantity }));
 
     if (items.length === 0) {
       alert("No items counted!");
-      setSubmitting(false);
       return;
     }
 
+    // Open Confirmation Modal
+    setConfirmationData({
+      isOpen: true,
+      title: "Confirm Stocktake",
+      details: [
+        { label: "Location", value: config?.locations.find(l => l.id === stockLocation)?.name || stockLocation },
+        { label: "Session", value: session },
+        { label: "Staff", value: currentUser.name },
+        { label: "Date", value: new Date().toLocaleDateString() }
+      ],
+      items: items,
+      onConfirm: () => submitStocktakeFinal(items)
+    });
+  };
+
+  const submitStocktakeFinal = async (items: StockItemSubmission[]) => {
+    setSubmitting(true);
     const success = await ApiService.submitStocktake({
       type: 'stocktake',
       timestamp: new Date().toISOString(),
-      staffName: currentUser.name,
+      staffName: currentUser!.name,
       barName: config?.locations.find(l => l.id === stockLocation)?.name || 'Unknown',
       session,
       items
@@ -84,16 +135,13 @@ const App: React.FC = () => {
     setSubmitting(false);
   };
 
-  const handleTransferSubmit = async () => {
+  const handleTransferReview = () => {
     if (!currentUser || !sourceLoc || !destLoc) return;
 
-    // VALIDATION: Prevent Same Bar Transfer
     if (sourceLoc === destLoc) {
       alert("Error: Source and Destination cannot be the same location.");
       return;
     }
-
-    setSubmitting(true);
 
     const items: StockItemSubmission[] = (Object.entries(transferItems) as [string, number][])
       .filter(([_, qty]) => qty > 0)
@@ -101,14 +149,30 @@ const App: React.FC = () => {
 
     if (items.length === 0) {
       alert("No items selected for transfer!");
-      setSubmitting(false);
       return;
     }
 
+    // Open Confirmation Modal
+    setConfirmationData({
+      isOpen: true,
+      title: "Confirm Transfer",
+      details: [
+        { label: "From", value: config?.locations.find(l => l.id === sourceLoc)?.name || sourceLoc },
+        { label: "To", value: config?.locations.find(l => l.id === destLoc)?.name || destLoc },
+        { label: "Staff", value: currentUser.name },
+        { label: "Date", value: new Date().toLocaleDateString() }
+      ],
+      items: items,
+      onConfirm: () => submitTransferFinal(items)
+    });
+  };
+
+  const submitTransferFinal = async (items: StockItemSubmission[]) => {
+    setSubmitting(true);
     const success = await ApiService.submitTransfer({
       type: 'transfer',
       timestamp: new Date().toISOString(),
-      staffName: currentUser.name,
+      staffName: currentUser!.name,
       source: config?.locations.find(l => l.id === sourceLoc)?.name || 'Unknown',
       destination: config?.locations.find(l => l.id === destLoc)?.name || 'Unknown',
       items
@@ -161,7 +225,19 @@ const App: React.FC = () => {
                 <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
                   <User size={20} />
                 </div>
-                <span className="font-medium text-zinc-200">{staff.name}</span>
+                <div className="flex-1">
+                  <span className="font-medium text-zinc-200 block">{staff.name}</span>
+                  {staff.role && staff.role !== 'Staff' && (
+                    <span className="text-xs text-yellow-600 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20 inline-block mt-1">
+                      {staff.role}
+                    </span>
+                  )}
+                  {staff.assignedLocation && (
+                    <span className="text-xs text-blue-500 ml-2">
+                       → {staff.assignedLocation}
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
@@ -171,6 +247,8 @@ const App: React.FC = () => {
   }
 
   if (view === 'DASHBOARD') {
+    const isLogistics = currentUser.role === 'Logistics';
+
     return (
       <div className="min-h-screen bg-zinc-950 p-6 flex flex-col max-w-md mx-auto">
         <header className="flex justify-between items-center mb-8">
@@ -190,18 +268,38 @@ const App: React.FC = () => {
         </header>
 
         <div className="grid gap-6 flex-1 content-center">
-          <button
-            onClick={() => setView('STOCKTAKE')}
-            className="h-48 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-3xl border border-zinc-700 p-8 flex flex-col items-center justify-center gap-4 hover:scale-[1.02] transition-transform shadow-2xl"
-          >
-            <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-              <ClipboardList size={32} />
+          {/* Stocktake Button - HIDDEN for Logistics Role */}
+          {!isLogistics && (
+            <button
+              onClick={() => setView('STOCKTAKE')}
+              className="h-48 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-3xl border border-zinc-700 p-8 flex flex-col items-center justify-center gap-4 hover:scale-[1.02] transition-transform shadow-2xl"
+            >
+              <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                <ClipboardList size={32} />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-white">Stocktake</h3>
+                <p className="text-zinc-500">
+                  {currentUser.assignedLocation 
+                    ? `Count Assigned Bars` 
+                    : "Count Opening/Closing"}
+                </p>
+              </div>
+            </button>
+          )}
+
+          {/* Logistics Placeholder if they can't stocktake */}
+          {isLogistics && (
+             <div className="h-48 bg-zinc-900/50 rounded-3xl border border-zinc-800 p-8 flex flex-col items-center justify-center gap-4 opacity-50 cursor-not-allowed">
+              <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-600">
+                <Lock size={32} />
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-zinc-500">Stocktake Restricted</h3>
+                <p className="text-zinc-600 text-sm">Logistics role only</p>
+              </div>
             </div>
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-white">Stocktake</h3>
-              <p className="text-zinc-500">Count Opening/Closing</p>
-            </div>
-          </button>
+          )}
 
           <button
             onClick={() => setView('TRANSFER')}
@@ -256,13 +354,14 @@ const App: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-3">
+            {/* LOCATION SELECTOR - Filtered by Role */}
             <select 
               className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm focus:ring-2 ring-yellow-500 outline-none"
               value={stockLocation}
               onChange={(e) => setStockLocation(e.target.value)}
             >
               <option value="">Select Location...</option>
-              {config?.locations.map(l => (
+              {availableStocktakeLocations.map(l => (
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </select>
@@ -291,17 +390,31 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
               <Store size={48} className="mb-4 opacity-50" />
               <p>Select a location to begin counting</p>
+              {currentUser.assignedLocation && (
+                <p className="text-sm text-yellow-600 mt-2">(You are assigned to {currentUser.assignedLocation})</p>
+              )}
             </div>
           )}
         </div>
 
         {stockLocation && (
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-zinc-950 border-t border-zinc-800 max-w-md mx-auto z-30">
-            <Button onClick={handleStocktakeSubmit} isLoading={submitting}>
-              Submit Count
+            <Button onClick={handleStocktakeReview} isLoading={submitting}>
+              Review & Submit
             </Button>
           </div>
         )}
+
+        {/* Receipt Modal */}
+        <ConfirmationModal 
+          isOpen={!!confirmationData}
+          onClose={() => setConfirmationData(null)}
+          onConfirm={confirmationData?.onConfirm || (() => {})}
+          title={confirmationData?.title || ""}
+          details={confirmationData?.details || []}
+          items={confirmationData?.items || []}
+          isLoading={submitting}
+        />
       </div>
     );
   }
@@ -367,11 +480,22 @@ const App: React.FC = () => {
 
         {(sourceLoc && destLoc) && (
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-zinc-950 border-t border-zinc-800 max-w-md mx-auto z-30">
-            <Button onClick={handleTransferSubmit} isLoading={submitting} className="bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20">
-              Confirm Transfer
+            <Button onClick={handleTransferReview} isLoading={submitting} className="bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20">
+              Review Transfer
             </Button>
           </div>
         )}
+
+        {/* Receipt Modal */}
+        <ConfirmationModal 
+          isOpen={!!confirmationData}
+          onClose={() => setConfirmationData(null)}
+          onConfirm={confirmationData?.onConfirm || (() => {})}
+          title={confirmationData?.title || ""}
+          details={confirmationData?.details || []}
+          items={confirmationData?.items || []}
+          isLoading={submitting}
+        />
       </div>
     );
   }

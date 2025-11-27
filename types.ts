@@ -14,6 +14,8 @@ export interface Location {
 export interface Staff {
   id: string;
   name: string;
+  role?: 'Admin' | 'Staff' | 'Logistics'; // New Field
+  assignedLocation?: string; // New Field
 }
 
 export interface AppConfig {

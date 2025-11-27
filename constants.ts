@@ -2,7 +2,7 @@ import { AppConfig } from './types';
 
 // We default to the URL you provided so it works immediately.
 // You can still override this in Vercel settings if you want.
-export const GOOGLE_SCRIPT_URL = (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbyLjk0OxzGrf9q9nfBRNBVeY6YivacAAZ5kDHkB6VFM0ZGyzHAPOTXjaQHFcvZVeVI6pA/exec";
+export const GOOGLE_SCRIPT_URL = (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbydlEs9OqZ3_Bldl9p3iQbom_06bf9lGpTug4XZSar3yN8dprz1UUigfgwuk9JrnWv7qw/exec";
 
 export const MOCK_CONFIG: AppConfig = {
   products: [
@@ -26,9 +26,9 @@ export const MOCK_CONFIG: AppConfig = {
     { id: 'l6', name: 'Main Storage', type: 'Storage' },
   ],
   staff: [
-    { id: 's1', name: 'Manager Dave' },
-    { id: 's2', name: 'Sarah Lead' },
-    { id: 's3', name: 'Bar Staff 1' },
-    { id: 's4', name: 'Logistics Team' },
+    { id: 's1', name: 'Manager Dave', role: 'Admin' },
+    { id: 's2', name: 'Sarah Lead', role: 'Staff', assignedLocation: 'Bar 1A, Bar 1B' },
+    { id: 's3', name: 'Bar Staff 1', role: 'Staff', assignedLocation: 'Bar 2' },
+    { id: 's4', name: 'Logistics Team', role: 'Logistics' },
   ]
 };

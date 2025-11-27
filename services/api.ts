@@ -20,18 +20,21 @@ export const ApiService = {
       // MAPPING FIX: 
       // 1. The backend returns 'items', but frontend expects 'products'
       // 2. Real data lacks 'id', so we use 'name' as the 'id' to fix dropdowns
+      // 3. Map new Role and AssignedLocation fields for Staff
       return {
         products: (data.items || []).map((p: any) => ({
           ...p,
-          id: p.name // Use Name as ID
+          id: p.name 
         })),
         locations: (data.locations || []).map((l: any) => ({
           ...l,
-          id: l.name // Use Name as ID
+          id: l.name 
         })),
         staff: (data.staff || []).map((s: any) => ({
           ...s,
-          id: s.name // Use Name as ID
+          id: s.name,
+          role: s.role,
+          assignedLocation: s.assignedLocation
         }))
       };
     } catch (error) {
@@ -50,18 +53,15 @@ export const ApiService = {
 
     try {
       // FIX: Map frontend keys to match Google Script expectations
-      // Frontend uses 'staffName', Backend expects 'staff'
-      // Frontend uses 'barName', Backend expects 'bar'
       const backendPayload = {
         ...payload,
         staff: payload.staffName,
         bar: payload.barName,
-        // Remove the mismatched keys to avoid confusion
         staffName: undefined,
         barName: undefined
       };
 
-      // POST Request: Send as text/plain (default) to avoid OPTIONS preflight
+      // POST Request: Send as text/plain
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify(backendPayload)
@@ -86,7 +86,6 @@ export const ApiService = {
       const backendPayload = {
         ...payload,
         staff: payload.staffName,
-        // Remove the mismatched key
         staffName: undefined
       };
 
