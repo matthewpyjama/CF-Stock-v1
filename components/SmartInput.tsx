@@ -24,7 +24,11 @@ export const SmartInput: React.FC<SmartInputProps> = ({
   useEffect(() => {
     const caseCount = parseInt(cases) || 0;
     const looseCount = parseInt(loose) || 0;
-    const calculatedTotal = Math.max(0, (caseCount * product.caseSize) + looseCount);
+    
+    // Safety check: ensure caseSize is a valid positive number
+    const safeCaseSize = Number(product.caseSize) > 0 ? Number(product.caseSize) : 1;
+    
+    const calculatedTotal = Math.max(0, (caseCount * safeCaseSize) + looseCount);
     
     setTotal(calculatedTotal);
     onUpdate(calculatedTotal);
@@ -50,7 +54,7 @@ export const SmartInput: React.FC<SmartInputProps> = ({
         <div>
           <h3 className="text-zinc-100 font-medium text-lg">{product.name}</h3>
           <p className="text-zinc-500 text-xs uppercase tracking-wider flex items-center gap-1">
-            <Package size={12} /> Case Size: {product.caseSize}
+            <Package size={12} /> Case Size: {product.caseSize || 1}
           </p>
           
           {/* WARNING MESSAGE */}

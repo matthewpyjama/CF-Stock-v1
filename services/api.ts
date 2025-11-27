@@ -27,7 +27,10 @@ export const ApiService = {
       return {
         products: (data.items || []).map((p: any) => ({
           ...p,
-          id: p.name 
+          id: p.name,
+          // Safety Fallbacks
+          category: p.category || 'Uncategorized',
+          caseSize: Number(p.caseSize) > 0 ? Number(p.caseSize) : 1
         })),
         locations: (data.locations || []).map((l: any) => ({
           ...l,
