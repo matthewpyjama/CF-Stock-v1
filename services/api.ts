@@ -20,10 +20,7 @@ export const ApiService = {
 
       const { products, locations, staff } = json.data;
 
-      // Transform backend data (Arrays) into Frontend Types (adding generated IDs)
-      // Backend returns: { name, category, caseSize }
-      // Frontend needs: { id, name, category, caseSize }
-      
+      // Transform backend data (Arrays) into Frontend Types
       const mappedProducts = Array.isArray(products) 
         ? products.map((p: any, index: number) => ({
             id: `p-${index}-${p.name.replace(/\s+/g, '').toLowerCase()}`,
@@ -61,30 +58,26 @@ export const ApiService = {
   },
 
   submitStocktake: async (payload: StocktakePayload): Promise<boolean> => {
-    // Transform Frontend Payload to Backend "Action" format
+    // Flattened payload for the new backend script logic
     const backendPayload = {
-      action: "submitStock",
-      data: {
-        session: payload.session,
-        location: payload.barName,
-        staff: payload.staffName,
-        items: payload.items
-      }
+      type: 'STOCK_TAKE',
+      session: payload.session,
+      bar: payload.barName,
+      staff: payload.staffName,
+      items: payload.items
     };
     
     return ApiService.sendToBackend(backendPayload);
   },
 
   submitTransfer: async (payload: TransferPayload): Promise<boolean> => {
-    // Transform Frontend Payload to Backend "Action" format
+    // Flattened payload for the new backend script logic
     const backendPayload = {
-      action: "submitTransfer",
-      data: {
-        source: payload.source,
-        destination: payload.destination,
-        staff: payload.staffName,
-        items: payload.items
-      }
+      type: 'TRANSFER',
+      source: payload.source,
+      destination: payload.destination,
+      staff: payload.staffName,
+      items: payload.items
     };
 
     return ApiService.sendToBackend(backendPayload);

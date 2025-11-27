@@ -1,7 +1,7 @@
 import { AppConfig } from './types';
 
 // The URL you provided from your deployment
-export const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjKeag6uX7TAN9mjx-HYILKnMld-hDfXHtEdgman_9566guWHo66WrIgeP4qwDid_9Tw/exec";
+export const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxpCAJ0zUuV4VpbLz0rDKo5ccbWCpZkzciBJ4utnb2KDtWuG-MrkHBJveJuobqzdHPJgQ/exec";
 
 // Fallback Mock Data (used if fetch fails)
 export const MOCK_CONFIG: AppConfig = {

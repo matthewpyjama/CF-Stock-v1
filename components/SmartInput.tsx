@@ -19,6 +19,13 @@ export const SmartInput: React.FC<SmartInputProps> = ({ product, onUpdate }) => 
     onUpdate(total);
   }, [cases, loose, product.caseSize, onUpdate]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Block: minus sign, 'e' (scientific notation), and '+'
+    if (['-', 'e', 'E', '+'].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div className="bg-zinc-900 p-4 rounded-lg border border-zinc-800 shadow-sm mb-3">
       <div className="flex justify-between items-start mb-3">
@@ -43,8 +50,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({ product, onUpdate }) => 
             <input
               type="number"
               inputMode="numeric"
+              min="0"
               value={cases}
               onChange={(e) => setCases(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0"
               className="w-full bg-zinc-950 border border-zinc-700 rounded p-3 text-lg focus:border-yellow-500 focus:outline-none text-white placeholder-zinc-700"
             />
@@ -57,8 +66,10 @@ export const SmartInput: React.FC<SmartInputProps> = ({ product, onUpdate }) => 
             <input
               type="number"
               inputMode="numeric"
+              min="0"
               value={loose}
               onChange={(e) => setLoose(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0"
               className="w-full bg-zinc-950 border border-zinc-700 rounded p-3 text-lg focus:border-yellow-500 focus:outline-none text-white placeholder-zinc-700"
             />

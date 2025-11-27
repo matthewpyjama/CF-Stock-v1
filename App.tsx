@@ -86,6 +86,13 @@ const App: React.FC = () => {
 
   const handleTransferSubmit = async () => {
     if (!currentUser || !sourceLoc || !destLoc) return;
+
+    // Validation: Check if source and destination are the same
+    if (sourceLoc === destLoc) {
+      alert("Error: Source and Destination cannot be the same location.");
+      return;
+    }
+
     setSubmitting(true);
 
     const items: StockItemSubmission[] = (Object.entries(transferItems) as [string, number][])
