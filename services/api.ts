@@ -1,56 +1,21 @@
 import { AppConfig, StocktakePayload, TransferPayload } from '../types';
 import { GOOGLE_SCRIPT_URL, MOCK_CONFIG } from '../constants';
 
+// Simple delay helper for mock
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const ApiService = {
   fetchConfig: async (): Promise<AppConfig> => {
-    console.log("Fetching config from:", GOOGLE_SCRIPT_URL);
-    
     if (!GOOGLE_SCRIPT_URL) {
-      console.warn("No API URL, using mock");
+      console.warn("Using Mock Data (No API URL provided in constants.ts)");
+      await delay(800); // Simulate network
       return MOCK_CONFIG;
     }
 
     try {
       const response = await fetch(GOOGLE_SCRIPT_URL);
-      const json = await response.json();
-
-      if (json.status !== 'success' || !json.data) {
-        throw new Error(json.message || "Invalid backend response");
-      }
-
-      const { products, locations, staff } = json.data;
-
-      // Transform backend data (Arrays) into Frontend Types
-      const mappedProducts = Array.isArray(products) 
-        ? products.map((p: any, index: number) => ({
-            id: `p-${index}-${p.name.replace(/\s+/g, '').toLowerCase()}`,
-            category: p.category || 'Uncategorized',
-            name: p.name,
-            caseSize: Number(p.caseSize) || 1
-          }))
-        : MOCK_CONFIG.products;
-
-      const mappedLocations = Array.isArray(locations)
-        ? locations.map((l: any, index: number) => ({
-            id: `l-${index}`,
-            name: l.name,
-            type: l.type || 'Bar'
-          }))
-        : MOCK_CONFIG.locations;
-
-      const mappedStaff = Array.isArray(staff)
-        ? staff.map((s: any, index: number) => ({
-            id: `s-${index}`,
-            name: s.name
-          }))
-        : MOCK_CONFIG.staff;
-
-      return {
-        products: mappedProducts,
-        locations: mappedLocations,
-        staff: mappedStaff
-      };
-
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error("Failed to fetch config, falling back to mock", error);
       return MOCK_CONFIG;
@@ -58,41 +23,40 @@ export const ApiService = {
   },
 
   submitStocktake: async (payload: StocktakePayload): Promise<boolean> => {
-    // Flattened payload for the new backend script logic
-    const backendPayload = {
-      type: 'STOCK_TAKE',
-      session: payload.session,
-      bar: payload.barName,
-      staff: payload.staffName,
-      items: payload.items
-    };
+    console.log("Submitting Stocktake:", payload);
     
-    return ApiService.sendToBackend(backendPayload);
-  },
-
-  submitTransfer: async (payload: TransferPayload): Promise<boolean> => {
-    // Flattened payload for the new backend script logic
-    const backendPayload = {
-      type: 'TRANSFER',
-      source: payload.source,
-      destination: payload.destination,
-      staff: payload.staffName,
-      items: payload.items
-    };
-
-    return ApiService.sendToBackend(backendPayload);
-  },
-
-  // Helper to handle the "text/plain" hack for Google Apps Script CORS
-  sendToBackend: async (payload: any): Promise<boolean> => {
-    if (!GOOGLE_SCRIPT_URL) return true;
+    if (!GOOGLE_SCRIPT_URL) {
+      await delay(1500);
+      return true;
+    }
 
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        // CRITICAL: Use text/plain to avoid CORS "Preflight" OPTIONS request
-        // The backend still parses it as JSON because we use JSON.parse(e.postData.contents)
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        mode: 'no-cors', // Google Apps Script requires no-cors for simple posts usually, or careful CORS setup
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return true;
+    } catch (error) {
+      console.error("Submission failed", error);
+      return false;
+    }
+  },
+
+  submitTransfer: async (payload: TransferPayload): Promise<boolean> => {
+    console.log("Submitting Transfer:", payload);
+
+    if (!GOOGLE_SCRIPT_URL) {
+      await delay(1500);
+      return true;
+    }
+
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       return true;
