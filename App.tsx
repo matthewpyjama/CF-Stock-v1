@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAppData } from './context/AppDataContext';
-import { ViewState, StockItemSubmission } from './types';
+import { ViewState, StockItemSubmission, Product } from './types';
 import { SmartInput } from './components/SmartInput';
 import { Button } from './components/Button';
 import { ApiService } from './services/api';
@@ -39,9 +39,9 @@ const App: React.FC = () => {
   };
 
   // Group Products for better UI
-  const productsByCategory = useMemo(() => {
+  const productsByCategory = useMemo((): Record<string, Product[]> => {
     if (!config) return {};
-    const grouped: Record<string, typeof config.products> = {};
+    const grouped: Record<string, Product[]> = {};
     config.products.forEach(p => {
       if (!grouped[p.category]) grouped[p.category] = [];
       grouped[p.category].push(p);
@@ -55,7 +55,7 @@ const App: React.FC = () => {
     setSubmitting(true);
     
     // Convert map to array
-    const items: StockItemSubmission[] = Object.entries(stockItems)
+    const items: StockItemSubmission[] = (Object.entries(stockItems) as [string, number][])
       .filter(([_, qty]) => qty > 0)
       .map(([name, quantity]) => ({ productName: name, quantity }));
 
@@ -88,7 +88,7 @@ const App: React.FC = () => {
     if (!currentUser || !sourceLoc || !destLoc) return;
     setSubmitting(true);
 
-    const items: StockItemSubmission[] = Object.entries(transferItems)
+    const items: StockItemSubmission[] = (Object.entries(transferItems) as [string, number][])
       .filter(([_, qty]) => qty > 0)
       .map(([name, quantity]) => ({ productName: name, quantity }));
 
@@ -216,7 +216,7 @@ const App: React.FC = () => {
   // --- Reusable Item Renderer ---
   const renderItemInputs = (updateMap: React.Dispatch<React.SetStateAction<Record<string, number>>>) => (
     <div className="space-y-8 pb-32">
-      {Object.entries(productsByCategory).map(([category, items]) => (
+      {(Object.entries(productsByCategory) as [string, Product[]][]).map(([category, items]) => (
         <div key={category}>
           <h3 className="text-yellow-500 font-bold text-sm uppercase tracking-widest mb-4 sticky top-16 bg-zinc-950 py-2 z-10 border-b border-zinc-800">
             {category}
