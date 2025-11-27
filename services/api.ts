@@ -17,11 +17,22 @@ export const ApiService = {
       const response = await fetch(GOOGLE_SCRIPT_URL);
       const data = await response.json();
 
-      // MAPPING FIX: The backend returns 'items', but frontend expects 'products'
+      // MAPPING FIX: 
+      // 1. The backend returns 'items', but frontend expects 'products'
+      // 2. Real data lacks 'id', so we use 'name' as the 'id' to fix dropdowns
       return {
-        products: data.items || [], // <--- This fixes the 'forEach' crash
-        locations: data.locations || [],
-        staff: data.staff || []
+        products: (data.items || []).map((p: any) => ({
+          ...p,
+          id: p.name // Use Name as ID
+        })),
+        locations: (data.locations || []).map((l: any) => ({
+          ...l,
+          id: l.name // Use Name as ID
+        })),
+        staff: (data.staff || []).map((s: any) => ({
+          ...s,
+          id: s.name // Use Name as ID
+        }))
       };
     } catch (error) {
       console.error("Failed to fetch config, falling back to mock", error);
